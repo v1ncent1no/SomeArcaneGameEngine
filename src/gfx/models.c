@@ -43,11 +43,9 @@ kp_mesh_error_t kp_init_mesh(kp_mesh_t* mesh, kp_vertex_t* vertices,
 			  (void*) KP_OFFSET_OF(kp_vertex_t, color));
     glEnableVertexAttribArray(1);
 
-    /*
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride,
 			  (void*) KP_OFFSET_OF(kp_vertex_t, uv_coord));
     glEnableVertexAttribArray(2);
-    */
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
