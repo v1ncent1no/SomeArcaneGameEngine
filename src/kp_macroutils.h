@@ -60,3 +60,8 @@ typedef double f64;
 
 #define KP_MEMBER_OF(T, m) (size_t) (((T*)0)->m)
 #define KP_OFFSET_OF(T, m) (size_t) ((char*) KP_MEMBER_OF(T, m) - (char*)0)
+
+#define MAX(A, B)\
+    (A) > (B) ? (A) : (B)
+#define MIN(A, B)\
+    (A) < (B) ? (A) : (B)

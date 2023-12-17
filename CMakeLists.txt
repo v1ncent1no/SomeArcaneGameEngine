@@ -14,7 +14,7 @@ include_directories(
 )
 
 file(GLOB SRC_FILES src/main.c src/kp_dynlist.c src/kp_memalloc.c
-     src/gfx/models.c)
+     src/gfx/models.c stc/io/fs.c)
 
 file(GLOB DEP_FILES lib/glad/src/gl.c)
 
