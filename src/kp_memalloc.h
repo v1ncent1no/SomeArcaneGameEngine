@@ -16,35 +16,34 @@
  *     - alloc(void *allocator, size_t size)
  *     - free(void *allocator, void* ptr)
  *     - realloc(void *allocator, void *ptr, size_t newsize)
+ *
+ * There's a default global parent memory allocator for `malloc.h` called
+ * `std_malloc_alloc` which uses `malloc`, `free`, `realloc`. To get it, you
+ * first need to include this header like this:
+ *
+ *     -> #include <malloc.h>
+ *        #include "kp_memalloc.h"
  */
 typedef void *(*kp_alloc_func_ptr)(void*, size_t);
 typedef void (*kp_free_func_ptr)(void*, void*);
 typedef void *(*kp_realloc_func_ptr)(void*, void*, size_t);
 
 typedef struct kp_alloctor {
-    void *parant_allocator;
+    void *parent;
     kp_alloc_func_ptr alloc;
     kp_realloc_func_ptr realloc;
     kp_free_func_ptr free;
-} kp_alloctor_t;
+} kp_allocator_t;
 
 #ifndef KP_MALLOC_DEFAULT_INTEFACE
 #define KP_MALLOC_DEFAULT_INTEFACE
 
-#include <malloc.h>
+void *__kp_std_malloc(void*, size_t size);
+void __kp_std_free(void*, void* ptr);
+void *__kp_std_realloc(void* _, void* ptr, size_t size);
 
-inline void *__kp_std_malloc(void* _, size_t size) {
-    return malloc(size);
-}
-inline void __kp_std_free(void* _, void* ptr) {
-    free(ptr);
-}
-inline void *__kp_std_realloc(void* _, void* ptr, size_t size) {
-    return realloc(ptr, size);
-}
-
-const kp_alloctor_t std_malloc_alloc = {
-    .parant_allocator = NULL,
+const kp_allocator_t std_malloc_alloc = {
+    .parent = NULL,
     .alloc = __kp_std_malloc,
     .free = __kp_std_free,
     .realloc = __kp_std_realloc
@@ -74,7 +73,7 @@ struct __kp_arena_region {
 // NOTE: consider keeping a pointer to the last allocated region, which can give
 //       some *little pieace* of perfomance, as arena's deallocated all at once
 typedef struct kp_arena_allocator {
-    // kp_alloctor_t parent_alloc;
+    kp_allocator_t parent;
     size_t region_size;
     struct __kp_arena_region* root;
 } kp_arena_t;
@@ -83,7 +82,8 @@ typedef struct kp_arena_allocator {
  * Initializes the arena. It's optional right now, as you may just do that
  * manually.
  */
-kp_memory_error_t kp_arena_init(kp_arena_t *arena, size_t region_size);
+kp_memory_error_t kp_arena_init(kp_arena_t *arena, kp_allocator_t *parent,
+                                size_t region_size) ;
 /**
  * Deletes a bunch of memory allocated by this exact kp_arena_t
  */

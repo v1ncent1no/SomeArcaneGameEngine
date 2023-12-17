@@ -2,23 +2,33 @@
 #include "kp_memalloc.h"
 #include "kp_macroutils.h"
 
+////////////////////////////////////////////////////////////////////////////
+/// Implementation of <malloc.h> memory allocator methods
 
-// FIXME: rewrite it, so that custom allocators use kp_allocator_t interface
-//        as a parant allocator;
-#ifndef KP_MEMALLOC_CUSTOM_MALLOC
+#ifdef KP_MALLOC_DEFAULT_INTEFACE
 #include <malloc.h>
 
-#define KP_MALLOC(size)          malloc(size)
-#define KP_FREE(ptr)             free(ptr)
-#define KP_REALLOC(ptr, newsize) realloc(ptr, newsize)
-#endif
+void *__kp_std_malloc(void* _, size_t size) {
+    return malloc(size);
+}
+void __kp_std_free(void* _, void* ptr) {
+    free(ptr);
+}
+void *__kp_std_realloc(void* _, void* ptr, size_t size) {
+    return realloc(ptr, size);
+}
+#endif // KP_MALLOC_DEFAULT_INTEFACE
+
+////////////////////////////////////////////////////////////////////////////
+/// `kp_arena_t` memory allocator's implementation
 
 /**
  * @param `size` is a number of bytes to be allocated for one region
  */
-static kp_memory_error_t kp_region_init(struct __kp_arena_region *region,
+static kp_memory_error_t kp_region_init(kp_allocator_t *allocator,
+                                        struct __kp_arena_region *region,
                                         size_t size) {
-    region->raw_memory = KP_MALLOC(size);
+    region->raw_memory = allocator->alloc(allocator->parent, size);
     if (!region->raw_memory)
         return KP_MEMORY_ERROR_REGION_ALLOC;
 
@@ -35,11 +45,14 @@ static kp_memory_error_t kp_region_init(struct __kp_arena_region *region,
  * @param `arena` is a pointer to arena
  * @param `region_size`
  */
-kp_memory_error_t kp_arena_init(kp_arena_t *arena, size_t region_size) {
+kp_memory_error_t kp_arena_init(kp_arena_t *arena, kp_allocator_t *parent,
+                                size_t region_size) {
     arena->region_size = region_size;
-    arena->root = KP_MALLOC(sizeof(struct __kp_arena_region));
+    arena->root = parent->alloc(parent->parent,
+                                sizeof(struct __kp_arena_region));
 
     kp_memory_error_t err = kp_region_init(
+        parent,
         arena->root,
         MAX(KP_ARENA_MIN_REGION_SIZE, region_size)
     );
@@ -61,7 +74,7 @@ kp_memory_error_t kp_arena_deinit(kp_arena_t* arena) {
     struct __kp_arena_region *region = arena->root;
     while (region->next != NULL) {
         struct __kp_arena_region *next = region->next;
-        KP_FREE(region);
+        arena->parent.free(arena->parent.parent, region);
         region = next;
     }
 
@@ -69,6 +82,7 @@ kp_memory_error_t kp_arena_deinit(kp_arena_t* arena) {
 }
 
 static kp_memory_error_t kp_region_alloc_recursive(
+    kp_allocator_t *allocator,
     struct __kp_arena_region* region,
     size_t min_size,
     size_t size,
@@ -80,7 +94,7 @@ static kp_memory_error_t kp_region_alloc_recursive(
         region = region->next;
 
     if ((region->local_size - (size_t)region->pointer) > size) {
-        region = KP_MALLOC(MAX(min_size, size));
+        region = allocator->alloc(allocator->parent, MAX(min_size, size));
         if (!region) return KP_MEMORY_ERROR_REGION_ALLOC;
     }
 
@@ -99,6 +113,7 @@ kp_memory_error_t kp_arena_alloc(kp_arena_t* arena, size_t size, void** ptr) {
         return KP_MEMORY_ERROR_ARENA_NOT_INITIALIZED;
 
     kp_memory_error_t err = kp_region_alloc_recursive(
+        &arena->parent,
         arena->root,
         arena->region_size,
         size,
@@ -108,3 +123,7 @@ kp_memory_error_t kp_arena_alloc(kp_arena_t* arena, size_t size, void** ptr) {
 
     return KP_MEMORY_ERROR_OK;
 }
+
+
+////////////////////////////////////////////////////////////////////////////
+/// TODO: To be continued later
