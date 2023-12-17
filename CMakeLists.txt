@@ -14,9 +14,11 @@ include_directories(
 )
 
 file(GLOB SRC_FILES src/main.c src/kp_dynlist.c src/kp_memalloc.c
-     src/gfx/models.c lib/glad/src/gl.c)
+     src/gfx/models.c)
 
-add_executable(clearn ${SRC_FILES})
+file(GLOB DEP_FILES lib/glad/src/gl.c)
+
+add_executable(clearn ${SRC_FILES} ${DEP_FILES})
 
 target_link_libraries(clearn glfw)
 
