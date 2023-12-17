@@ -58,6 +58,7 @@ int main(void) {
     return 0;
 }
 
+// TODO: make it not just copy the string, but all accept fmt arguments
 #define ERROR_BUFFER state.err_msg_buf
 #define ERROR(MSG) \
     KP_STATEMENT(strcpy(ERROR_BUFFER, "error: " MSG));\
@@ -119,7 +120,6 @@ void init() {
         indices,
         KP_ARRAY_LENGTH(indices),
         GL_STATIC_DRAW);
-
 
     ////////////////////////////////////////////////////////////////////////////
     /// Shader Program Creation
