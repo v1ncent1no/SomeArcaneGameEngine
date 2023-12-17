@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.20)
 
 project(clearn LANGUAGES C)
 
@@ -13,7 +13,8 @@ include_directories(
     lib/HandmadeMath/
 )
 
-file(GLOB SRC_FILES src/main.c src/kp_dynlist.c src/kp_memalloc.c)
+file(GLOB SRC_FILES src/main.c src/kp_dynlist.c src/kp_memalloc.c
+     src/gfx/models.c lib/glad/src/gl.c)
 
 add_executable(clearn ${SRC_FILES})
 

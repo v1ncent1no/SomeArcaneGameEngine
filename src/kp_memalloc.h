@@ -10,9 +10,9 @@
  *
  */
 
-typedef enum KP_MEMORY_ERROR {
-    KP_ERROR_OK
-} KP_MEMORY_ERROR;
+typedef enum kp_memory_error {
+    KP_MEMORY_OK
+} kp_memory_error_t;
 
 struct __kp_arena_region {
     u8 *raw_memory;
@@ -30,14 +30,14 @@ typedef struct kp_arena_allocator {
  * Initializes the arena. It's optional right now, as you may just do that
  * manually.
  */
-KP_MEMORY_ERROR kp_arena_init(kp_arena_t *arena, size_t regions_size);
+kp_memory_error_t kp_arena_init(kp_arena_t *arena, size_t regions_size);
 /**
  * Deletes a bunch of memory allocated by this exact kp_arena_t
  */
-KP_MEMORY_ERROR kp_arena_deinit(kp_arena_t* arena);
+kp_memory_error_t kp_arena_deinit(kp_arena_t* arena);
 
 /**
  * If there's enough space in the last region, return the address, otherwise
  * creates another and returns the address to int.
  */
-KP_MEMORY_ERROR kp_arena_alloc(kp_arena_t* arena, size_t size, void** ptr);
+kp_memory_error_t kp_arena_alloc(kp_arena_t* arena, size_t size, void** ptr);

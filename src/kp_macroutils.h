@@ -33,23 +33,28 @@ typedef double f64;
     #define KP_LOG(MSG)
     #define KP_LOG_ASSERT(C, MSG)
 #else
-    #define KP_LOG(MSG) \
-        fprintf(stderr, "[%s:%s:%d] %s", __FILE_NAME__, __FUNCTION__, \
-                __LINE__, MSG);
+    #define KP_LOG_FMT(MSG, FMT, ...) \
+        KP_STATEMENT(fprintf(stderr, "INFO: [%s:%s:%d]: %s" FMT, \
+    __FILE_NAME__, __FUNCTION__, __LINE__, MSG, __VA_ARGS__));
 
-    #ifdef KP_USE_LIBC_ASSERT
+    #define KP_LOG(MSG) \
+        KP_LOG_FMT(MSG, "")
+
+    #ifdef _ASSERT_H
         #define KP_ASSERT(C) \
             assert(C);
         #define KP_LOG_ASSERT(C, MSG) \
             KP_STATEMENT(if (!(C)) { KP_LOG(MSG); abort(); })
-
     #else
         #define KP_ASSERT_BREAK() \
             *(int*)0 = 0;
         #define KP_ASSERT(C) \
             KP_STATEMENT(if (!(C)) { KP_ASSERT_BREAK(); })
+        #define KP_LOG_FMT_ASSERT(C, MSG, FMT, ...) \
+            KP_STATEMENT(if (!(C)) { KP_LOG_FMT(MSG, FMT, __VA_ARGS__); \
+                                     KP_ASSERT_BREAK(); })
         #define KP_LOG_ASSERT(C, MSG) \
-            KP_STATEMENT(if (!(C)) { KP_LOG(MSG); KP_ASSERT_BREAK(); })
+            KP_LOG_FMT_ASSERT(C, MSG, "")
     #endif
 #endif
 
@@ -61,7 +66,9 @@ typedef double f64;
 #define __KP_STRING_CONCAT(A, B) A ## B
 #define KP_STRING_CONCAT(A, B) __KP_STRING_CONCAT(A, B)
 
-#define KP_OFFSET_OF(T, m) (size_t) ((char*)(((T*)0)->m) - (char*)0)
+#define KP_MEMBER_OF(T, m) (size_t) (((T*)0)->m)
+#define KP_OFFSET_OF(T, m) (size_t) ((char*) KP_MEMBER_OF(T, m) - (char*)0)
 
+// FIXME: causes compile breakdown
 #define KP_TODO \
     KP_LOG_ASSERT(false, "UNIMPLEMENTED")

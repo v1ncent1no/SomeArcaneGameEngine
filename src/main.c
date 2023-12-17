@@ -1,16 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
-#define GLAD_GL_IMPLEMENTATION
 #include <glad/gl.h>
 
 #include <GLFW/glfw3.h>
 
 #include <HandmadeMath.h>
 
-#define KP_USE_LIBC_ASSERT
 #include "kp_macroutils.h"
+#include "gfx/models.h"
 
 #define ERR_MSG_BUF_LEN 1024
 struct {
@@ -19,14 +19,7 @@ struct {
        i32 height;
        GLFWwindow* handle;
     } window;
-
-    struct {
-        u32 vao;
-        u32 vbo;
-        u32 ebo;
-
-        u32 elem_count;
-    } mesh;
+    kp_mesh_t mesh;
     u32 shader_program;
 
     char err_msg_buf[ERR_MSG_BUF_LEN];
@@ -107,10 +100,10 @@ void init() {
         return;
     }
 
-    f32 vertices[] = {
-        -0.5, -0.5, 0.0,
-         0.5, -0.5, 0.0,
-         0.0,  0.5, 0.0
+    kp_vertex_t vertices[] = {
+        {{-0.5, -0.5, 0.0}, {0.0, 0.0, 1.0}},
+        {{0.5, -0.5, 0.0}, {0.0, 1.0, 0.0}},
+        {{0.0, 0.5, 0.0}, {1.0, 0.0, 0.0}},
     };
     u32 indices[] = {
         0, 1, 2
@@ -119,38 +112,14 @@ void init() {
     ////////////////////////////////////////////////////////////////////////////
     /// Mesh Creation
 
-    u32 vao, vbo, ebo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        sizeof(vertices),
+    kp_mesh_error_t mesh_err = kp_init_mesh(
+        &state.mesh,
         vertices,
-        GL_STATIC_DRAW
-    );
-
-    state.mesh.elem_count = sizeof(indices) / sizeof(indices[0]);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        sizeof(indices),
+        KP_ARRAY_LENGTH(vertices),
         indices,
-        GL_STATIC_DRAW
-    );
+        KP_ARRAY_LENGTH(indices),
+        GL_STATIC_DRAW);
 
-    const size_t stride = 0;
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, 0);
-    glEnableVertexAttribArray(0);
-
-    state.mesh.vao = vao;
-    state.mesh.vbo = vbo;
-    state.mesh.ebo = ebo;
 
     ////////////////////////////////////////////////////////////////////////////
     /// Shader Program Creation
@@ -158,14 +127,19 @@ void init() {
     const char *vert_src =
         "#version 330 core\n"
         "layout (location = 0) in vec3 pos;\n"
+        "layout (location = 1) in vec3 color;\n"
+        "uniform mat4 mvp;\n"
+        "out vec3 vert_color;\n"
         "void main() {\n"
-        "   gl_Position = vec4(pos, 1.0);\n"
+        "   gl_Position = mvp * vec4(pos, 1.0);\n"
+        "   vert_color = color;\n"
         "}\n";
     const char *frag_src =
         "#version 330 core\n"
         "out vec4 frag_color;\n"
+        "in vec3 vert_color;\n"
         "void main() {\n"
-        "   frag_color = vec4(1.0);\n"
+        "   frag_color = vec4(vert_color, 1.0);\n"
         "}\n";
 
     u32 vertex = glCreateShader(GL_VERTEX_SHADER);
@@ -173,14 +147,14 @@ void init() {
     glCompileShader(vertex);
 
     glGetShaderiv(vertex, GL_COMPILE_STATUS, (int*) &state.ok);
-    KP_LOG_ASSERT(state.ok, "FAILED COMPILE VERTEX SHADER");
+    // KP_LOG_ASSERT(state.ok, "FAILED COMPILE VERTEX SHADER");
 
     u32 fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &frag_src, NULL);
     glCompileShader(fragment);
 
     glGetShaderiv(fragment, GL_COMPILE_STATUS, (int*) &state.ok);
-    KP_LOG_ASSERT(state.ok, "FAILED COMPILE FRAGMENT SHADER");
+    // KP_LOG_ASSERT(state.ok, "FAILED COMPILE FRAGMENT SHADER");
 
     u32 program = glCreateProgram();
     glAttachShader(program, vertex);
@@ -189,7 +163,7 @@ void init() {
     glLinkProgram(program);
 
     glGetProgramiv(program, GL_LINK_STATUS, (int*) &state.ok);
-    KP_LOG_ASSERT(state.ok, "FAILED TO LINK PROGRAM")
+    // KP_LOG_ASSERT(state.ok, "FAILED TO LINK PROGRAM");
 
     glDetachShader(program, vertex);
     glDetachShader(program, fragment);
@@ -203,11 +177,34 @@ void init() {
 }
 
 void frame() {
+    HMM_Mat4 proj = HMM_Perspective_RH_NO(
+        HMM_ToRad(70),
+        (f32)state.window.width / (f32)state.window.height,
+        0.01,
+        1000.0
+    );
+    HMM_Mat4 view = HMM_LookAt_RH(
+        (HMM_Vec3){{0.0, 0.0, -3.0}},
+        (HMM_Vec3){{0.0, 0.0, 0.0}},
+        (HMM_Vec3){{0.0, 1.0, 0.0}}
+    );
+    HMM_Mat4 model = HMM_Rotate_RH(glfwGetTime(),
+                                   (HMM_Vec3){{ 0.0, 1.0, 0.0 }});
+
+    const HMM_Mat4 mvp = HMM_MulM4(HMM_MulM4(proj, view), model);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(state.shader_program);
-    glBindVertexArray(state.mesh.vao);
-    glDrawElements(GL_TRIANGLES, state.mesh.elem_count, GL_UNSIGNED_INT, NULL);
+
+    glUniformMatrix4fv(
+        glGetUniformLocation(state.shader_program, "mvp"),
+        1,
+        GL_FALSE,
+        (const float*) &mvp
+    );
+
+    kp_draw_mesh(&state.mesh);
 
     glfwPollEvents();
     glfwSwapBuffers(state.window.handle);
@@ -215,10 +212,7 @@ void frame() {
 
 void cleanup() {
     glDeleteProgram(state.shader_program);
-
-    glDeleteBuffers(1, &state.mesh.vbo);
-    glDeleteBuffers(1, &state.mesh.ebo);
-    glDeleteVertexArrays(1, &state.mesh.vao);
+    kp_free_mesh(&state.mesh);
 
     glfwTerminate();
 }
