@@ -12,16 +12,16 @@ kp_mesh_error_t kp_init_mesh(kp_mesh_t* mesh, kp_vertex_t* vertices,
     glGenBuffers(VBO_CURRENT_COUNT, &vbo);
     if (!vbo) return KP_MESH_ERROR_VBO_NULL;
     glGenBuffers(1, &ebo);
+    if (!ebo) return KP_MESH_ERROR_EBO_NULL;
 
     glBindVertexArray(vao);
-    if (!ebo) return KP_MESH_ERROR_EBO_NULL;
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 
     glBufferData(
 	GL_ARRAY_BUFFER,
-	sizeof(vertices) * vertex_count,
+	sizeof(vertices[0]) * vertex_count,
 	vertices,
 	use
     );

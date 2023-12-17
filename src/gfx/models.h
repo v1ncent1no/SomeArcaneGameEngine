@@ -28,8 +28,8 @@ typedef struct kp_vertex {
 } kp_vertex_t;
 
 kp_mesh_error_t kp_init_mesh(kp_mesh_t* mesh, kp_vertex_t* vertices,
-			  size_t vertex_count, u32 *indices,
-			  size_t index_count, GLenum use);
+			     size_t vertex_count, u32 *indices,
+			     size_t index_count, GLenum use);
 
 void kp_free_mesh(kp_mesh_t *mesh);
 void kp_draw_mesh(kp_mesh_t *mesh);
